@@ -28,7 +28,7 @@ from click_types import PDF, PathFile, PagesRange
 @click.option(
     "--output_name", prompt="Your output file name: ", help="output file name"
 )
-def cli(pdf: Path, dest: Path, pages_range: tuple[int, int]):
+def cli(pdf: Path, dest: Path, pages_range: tuple[int, int], output_name:str):
     """Simple program that greets NAME for a total of COUNT times."""
     click.echo(f"Your pages range is {pages_range[0]}-{pages_range[1]}")
 
