@@ -2,69 +2,77 @@ import click
 from pathlib import Path
 
 
-class PDF(click.ParamType):
-    name = "filepath"
-
-    def is_valid_pdf(path: Path) -> tuple[bool, str]:
-        if not path.exists():
-            return False, "path/file not found"
-        if not path.is_file():
-            return False, "path must be a file"
-        if not path.name.endswith(".pdf"):
-            return False, "file must be a pdf"
-
-        return True, ""
-
-    def convert(self, value, param, ctx) -> Path:
-        file_path = Path(value)
-        valitadion = PDF.is_valid_pdf(file_path)
-        if not valitadion[0]:
-            self.fail(
-                f"""{valitadion[1]}
-                file searched: {file_path.absolute()}""",
-                param,
-                ctx,
-            )
-        return file_path
+from pathlib import Path
+import click
+from typing import Tuple
 
 
-class PathFile(click.ParamType):
-    name = "dest"
+class BasePathValidator(click.ParamType):
+    """Base class for path validation with common functionality."""
 
-    def is_valid_path(path: Path) -> tuple[bool, str]:
-        if not path.exists():
-            return False, "path not found"
-        if path.is_file():
-            return False, "path is a file"
-        return True, ""
+
+    def validate_path(self, path: Path) -> Tuple[bool, str]:
+        """Common path validation logic to be implemented by subclasses."""
+        raise NotImplementedError
 
     def convert(self, value, param, ctx) -> Path:
         path = Path(value)
-        validation = PathFile.is_valid_path(path)
-        if not validation[0]:
+        is_valid, message = self.validate_path(path)
+
+        if not is_valid:
             self.fail(
-                f"""{validation[1]}
-                path searched: {path.absolute()}""",
+                f"{message}\nPath searched: {path.absolute()}",
                 param,
                 ctx,
             )
-
         return path
 
 
+class PDF(BasePathValidator):
+    """Validates that a path points to an existing PDF file."""
+    name = "filepath"
+
+    @staticmethod
+    def validate_path(path: Path) -> Tuple[bool, str]:
+        if not path.exists():
+            return False, "Path/file not found"
+        if not path.is_file():
+            return False, "Path must be a file"
+        if not path.name.lower().endswith(".pdf"):
+            return False, "File must be a PDF"
+        return True, ""
+
+
+class PathFile(BasePathValidator):
+    """Validates that a path points to an existing directory."""
+    name = "dest"
+
+    @staticmethod
+    def validate_path(path: Path) -> Tuple[bool, str]:
+        if not path.exists():
+            return False, "Path not found"
+        if path.is_file():
+            return False, "Path must be a directory, not a file"
+        return True, ""
+
+
 class PagesRange(click.ParamType):
+    """Validates and converts page range input (e.g., '12-14')."""
     name = "pages_range"
 
-    def convert(self, value: str, param, ctx):
-        if type(value) == tuple and len(value) == 2:
+    def convert(self, value, param, ctx) -> Tuple[int, int]:
+        if isinstance(value, tuple) and len(value) == 2:
             return value
 
         try:
-            pages = value.split("-")
-            page_range: tuple[int, int] = int(pages[0]), int(pages[1])
-        except Exception as e:
-            self.fail(
-                "invalid range, please insert a valid one (example 12-14)", param, ctx
-            )
+            if isinstance(value, str):
+                start, end = map(int, value.split("-"))
+                return start, end
+        except (ValueError, AttributeError):
+            pass
 
-        return page_range
+        self.fail(
+            "Invalid range format. Please use 'start-end' (e.g., '12-14')",
+            param,
+            ctx,
+        )
