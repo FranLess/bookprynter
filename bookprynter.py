@@ -1,7 +1,8 @@
 from pathlib import Path
 import click
 from options_args import OPTIONS
-import print_procces
+from pdf_process import  PdfSplitter
+from print_actions import PrinterActions
 
 
 # TODO implementar validación de paginas dentro del rango del pdf
@@ -30,11 +31,15 @@ def cli(
     click.confirm(
         "Please confirm 3 more times (PRES ENTER) [1/3]", abort=True, default=True)
     click.confirm(
-        "Please confirm 3 more times (PRES ENTER) [2/3]", abort=True, default=True)
+        "Please confirm 2 more times (PRES ENTER) [2/3]", abort=True, default=True)
     click.confirm(
-        "Please confirm 3 more times (PRES ENTER) [3/3]", abort=True, default=True)
-    a = print_procces.PdfSplitter(pdf, dest, pages_range, output_name)
-    a.split_pdf()
+        "Please confirm 1 more times (PRES ENTER) [3/3]", abort=True, default=True)
+
+    a = PdfSplitter(pdf, dest, pages_range, output_name)
+    parts = a.split_pdf()
+    print(parts)
+    PrinterActions.execute_workflow(parts)    
+
 
     # TODO pdf is splitted and ready to be printed, now just print it
     # choice a printer
